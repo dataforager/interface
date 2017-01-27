@@ -1,0 +1,22 @@
+model in "singlecell-full5-lognorm-corrorigins-cellbetas-age.bug"
+data in "gefromjan-data-050615-withCHAges-noNAs.txt"
+compile
+parameters in "gefromjan-initial-050615-withCHAges-noNAs.txt"
+initialize
+update 10000
+monitor lambdaGrand
+monitor deltaGrand
+monitor mum
+monitor mud
+monitor etam
+monitor etad
+monitor tau
+monitor rho
+monitor psi
+monitor phi
+monitor sigmaDelta
+monitor sigmaLambda
+monitor siglambagePr
+monitor lambage[1:5]
+update 250000
+coda *, stem("CODA-gefromjan-050615-withCHAges-CorrOrigins-CellBetas-MainParams-")

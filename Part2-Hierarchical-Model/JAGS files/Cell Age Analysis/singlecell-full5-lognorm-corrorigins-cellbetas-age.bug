@@ -1,0 +1,76 @@
+model {	
+
+	# 1) check order of cells in Tdata, selectMatrix and lambda.delta
+
+	# T must have budding times first followed by division times
+	for (p in 1:Np) {
+		Tdata[selectColidx[p,1]:selectColidx[p,2]] ~ dmnorm(t(diag(betavec[b.idx[p,1]:b.idx[p,2]],colpadvecs[colpad.idx[p,1]:colpad.idx[p,2]],rowpadvecs[rowpad.idx[p,1]:rowpad.idx[p,2]]) + selectDiv[selectRowidx[p,1]:selectRowidx[p,2],selectColidx[p,1]:selectColidx[p,2]]) %*% lamdelvec[selectRowidx[p,1]:selectRowidx[p,2]], tauPrec*inverse(t(A[ARowidx[p,1]:ARowidx[p,2],AColidx[p,1]:AColidx[p,2]]) %*% A[ARowidx[p,1]:ARowidx[p,2],AColidx[p,1]:AColidx[p,2]]))
+
+		# for cell-specific lambdas
+		for (j in 1:M[p]) {
+			lamdelvec[(LD.idx[p,1]-1)+j] ~ dlnorm(lambageStar[ages[(ageidx[p,1]-1)+j]] + psiStar*(log(lamdelvec[(LD.idx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+j,1]]) - lambageStar[ages[(ageidx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+j,1]]]),(1/(1-psiStar^2))*siglamPrecStar)
+			betavec[(b.idx[p,1]-1)+j] ~ dbeta(mum*etam,(1-mum)*etam) 
+		}
+
+		for (k in (M[p]+1):(M[p]+D[p])) {
+			lamdelvec[(LD.idx[p,1]-1)+k] ~ dlnorm(lambageStar[ages[(ageidx[p,1]-1)+k]] + rho*(log(lamdelvec[(LD.idx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+k,1]]) - lambageStar[ages[(ageidx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+k,1]]]), (1/(1-rhoStar^2))*siglamPrecStar)
+			betavec[(b.idx[p,1]-1)+k] ~ dbeta(mud*etad,(1-mud)*etad)
+		}
+
+		for (m in (M[p]+D[p]+1):(M[p]+D[p]+MO[p])) {
+			lamdelvec[(LD.idx[p,1]-1)+m] ~ dlnorm(lambageStar[ages[(ageidx[p,1]-1)+m]],siglamPrecStar)
+			betavec[(b.idx[p,1]-1)+m] ~ dbeta(mum*etam,(1-mum)*etam)
+		}
+
+		for (n in (M[p]+D[p]+MO[p]+1):(M[p]+D[p]+MO[p]+DO[p])) {
+			lamdelvec[(LD.idx[p,1]-1)+n] ~ dlnorm(lambageStar[ages[(ageidx[p,1]-1)+n]] + ((rhoStar*phiStar*(1-(psiStar^2)))/(1-(psiStar*phiStar)^2))*(sqrt(sigdelPrecStar)/sqrt(siglamPrecStar))*(log(lamdelvec[(LD.idx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+n,2]])-deltaGrandStar) + ((psiStar*rhoStar*(1-(phiStar^2)))/(1-(psiStar*phiStar)^2))*(log(lamdelvec[(LD.idx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+n,1]])-lambageStar[ages[(ageidx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+n,1]]]),((1-(psiStar*phiStar)^2)/(1-(psiStar*phiStar)^2 - (rhoStar^2)*(phiStar^2 - 2*(phiStar^2)*(psiStar^2) + psiStar^2)))*siglamPrecStar)
+			#lamdelvec[(LD.idx[p,1]-1)+n] ~ dlnorm(lambdaGrandStar,siglamPrecStar)
+			betavec[(b.idx[p,1]-1)+n] ~ dbeta(mud*etad,(1-mud)*etad)
+		}
+
+		# for cell-specific deltas
+		for (d in (M[p]+D[p]+MO[p]+DO[p]+1):(M[p]+D[p]+MO[p]+DO[p]+D[p])) {
+			lamdelvec[(LD.idx[p,1]-1)+d] ~ dlnorm(deltaGrandStar + phiStar*(sqrt(siglamPrecStar)/sqrt(sigdelPrecStar))*(log(lamdelvec[(LD.idx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+d,1]])-lambageStar[ages[(ageidx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+d,1]]]),(1/(1-(phiStar)^2))*sigdelPrecStar)
+			#lamdelvec[(LD.idx[p,1]-1)+d] ~ dlnorm(deltaGrandStar,sigdelPrecStar)
+		}
+
+		for (do in (M[p]+D[p]+MO[p]+DO[p]+D[p]+1):(M[p]+D[p]+MO[p]+DO[p]+D[p]+DO[p])) {
+			lamdelvec[(LD.idx[p,1]-1)+do] ~ dlnorm(deltaGrandStar + (psiStar*phiStar)*(sqrt(siglamPrecStar)/sqrt(sigdelPrecStar))*(log(lamdelvec[(LD.idx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+do,1]]) - lambageStar[ages[(ageidx[p,1]-1)+idxKey[(LD.idx[p,1]-1)+do,1]]]),(1/(1-(psiStar*phiStar)^2))*sigdelPrecStar)
+			#lamdelvec[(LD.idx[p,1]-1)+do] ~ dlnorm(deltaGrandStar,sigdelPrecStar)
+		}
+
+	}
+
+	for (a in 1:maxage) {
+		lambageStar[a] <- 2*log(lambage[a]) - (1/2)*log( (1/siglamPrec) + (lambage[a]^2) )
+		lambage[a] ~ dnorm(lambdaGrand,siglambagePr)
+	}
+
+	#lambdaGrandStar <- 2*log(lambdaGrand) - (1/2)*log( (1/siglamPrec) + (lambdaGrand^2) )
+	siglamPrecStar <- 1/( log( ( (1/siglamPrec) + (lambdaGrand^2) )/(lambdaGrand^2) ) )
+	deltaGrandStar <- 2*log(deltaGrand) - (1/2)*log( (1/sigdelPrec) + (deltaGrand^2) )
+	sigdelPrecStar <- 1/( log( ( (1/sigdelPrec) + (deltaGrand^2) )/(deltaGrand^2) ) )
+
+	psiStar <- log( psi*((1/siglamPrec)/(lambdaGrand^2)) + 1 )/log( ( (1/siglamPrec) + (lambdaGrand^2) )/(lambdaGrand^2) )
+	rhoStar <- log( rho*((1/siglamPrec)/(lambdaGrand^2)) + 1 )/log( ( (1/siglamPrec) + (lambdaGrand^2) )/(lambdaGrand^2) )
+	phiStar <- log( phi*( (sqrt(1/sigdelPrec)*sqrt(1/siglamPrec)) / (deltaGrand*lambdaGrand) ) + 1 )/(sqrt(log( ( (1/sigdelPrec) + (deltaGrand^2))/(deltaGrand^2) ) )*sqrt(log( ( (1/siglamPrec) + (lambdaGrand^2)) / (lambdaGrand^2) ) ) )
+
+	psi ~ dunif(-1.0,1.0)
+	rho ~ dunif(-1.0,1.0)
+	phi ~ dunif(-1.0,1.0)
+	lambdaGrand ~ dnorm(78.2,1/(18.2^2))
+	deltaGrand ~ dnorm(55.0,1/(22.5^2))
+	tau <- 1.0/sqrt(tauPrec)
+	tauPrec ~ dgamma(4.082239,10.180776)
+	sigmaLambda <- 1.0/sqrt(siglamPrec)
+	sigmaDelta <- 1.0/sqrt(sigdelPrec)
+	siglamPrec ~ dgamma(0.9453302,4.4806515)
+	sigdelPrec ~ dgamma(0.9453302,4.4806515)
+	siglambagePr ~ dgamma(0.9453302,4.4806515)
+	#betam ~ dbeta(2.4,17.6)
+	#betad ~ dbeta(2.4,17.6)
+	mum ~ dbeta(2.4,17.6)
+	mud ~ dbeta(2.4,17.6)
+	etam ~ dgamma(27.12464,1.356232)
+	etad ~ dgamma(27.12464,1.356232)
+}
